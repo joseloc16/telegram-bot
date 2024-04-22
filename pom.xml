@@ -33,6 +33,25 @@
 			<artifactId>telegrambots-spring-boot-starter</artifactId>
 			<version>6.5.0</version>
 		</dependency>
+		<!--PostgreSQL-->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.6.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+			<version>3.1.5</version>
+		</dependency>
+		<!-- Agregada para solucionar el error de NoClassDefFoundError: javax.xml.bind.annotation.XmlElement -->
+		<dependency>
+			<groupId>javax.xml.bind</groupId>
+			<artifactId>jaxb-api</artifactId>
+			<version>2.3.1</version>
+		</dependency>
+
+		<!--Test-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
