@@ -31,9 +31,9 @@ Dentro de la sesión de PostgreSQL, ejecute los siguientes comandos SQL para con
 2. **Crear Tabla**
     ```bash
     CREATE TABLE words_detect (
-      id_word bigint NOT NULL DEFAULT nextval('seq_words_detect'),
+      word_id bigint NOT NULL DEFAULT nextval('seq_words_detect'),
       word VARCHAR(255) NOT NULL,
-      PRIMARY KEY (id_word)
+      PRIMARY KEY (word_id)
     );
     
 Crea la tabla words_detect con una columna para ID y otra para la palabra detectada.
