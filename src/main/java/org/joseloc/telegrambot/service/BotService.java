@@ -25,11 +25,10 @@ public class BotService extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        SendMessage response = messageProcessor.processMessage(update);
-        sendResponse(response);
+        sendMessage(messageProcessor.processMessage(update));
     }
 
-    private void sendResponse(SendMessage response) {
+    private void sendMessage(SendMessage response) {
         try {
             execute(response);
         } catch (TelegramApiException ex) {
