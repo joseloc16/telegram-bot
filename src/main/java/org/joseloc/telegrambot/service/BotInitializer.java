@@ -1,19 +1,17 @@
 package org.joseloc.telegrambot.service;
 
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
+@RequiredArgsConstructor
 @Service
 public class BotInitializer {
 
     private final BotService botService;
-
-    public BotInitializer(BotService botService) {
-        this.botService = botService;
-    }
 
     @PostConstruct
     public void registerBot() {
