@@ -1,6 +1,8 @@
 package org.joseloc.telegrambot.service;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -13,9 +15,15 @@ public class BotService extends TelegramLongPollingBot {
 
     private final MessageProcessor messageProcessor;
 
+    @Value("${verifyBot.botName}")
+    private String botName;
+    @Getter
+    @Value("${verifyBot.botToken}")
+    private String botToken;
+
     @Override
     public String getBotUsername() {
-        return "josmig_bot";
+        return botName;
     }
 
     @Override
