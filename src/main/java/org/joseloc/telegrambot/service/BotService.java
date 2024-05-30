@@ -33,11 +33,16 @@ public class BotService extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        sendMessage(messageProcessor.processMessage(update));
-    }
-
-    private void sendMessage(SendMessage response) {
         try {
+            SendMessage response;
+            if (update.hasMessage() && update.getMessage().hasText()) {
+                response = messageProcessor.processMessage(update);
+            } else if (update.hasCallbackQuery()) {
+                response = messageProcessor.processCallback(update.getCallbackQuery());
+            } else {
+                String chatId = update.hasMessage() ? update.getMessage().getChatId().toString() : "unknown";
+                response = new SendMessage(chatId, "Disculpa. No puedo procesar este mensaje.");
+            }
             execute(response);
         } catch (TelegramApiException ex) {
             ex.printStackTrace();
