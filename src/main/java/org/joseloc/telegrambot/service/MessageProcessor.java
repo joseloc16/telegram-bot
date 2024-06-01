@@ -1,9 +1,9 @@
 package org.joseloc.telegrambot.service;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import lombok.RequiredArgsConstructor;
 import org.joseloc.telegrambot.dto.Button;
+import org.joseloc.telegrambot.dto.MensajesTest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
@@ -14,38 +14,49 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 public class MessageProcessor {
 
-    private static final Logger logger = LogManager.getLogger(MessageProcessor.class);
+    @Value("${contador-mensajes}")
+    private int contadorMensajes;
 
-    //private final WordFinder wordFinder;
+    MensajesTest mensajesTest_1 = new MensajesTest("Banco Nacional: Su cuenta ha sido bloqueada debido a actividad sospechosa. Verifique su información inmediatamente en https://banco-verificacion-falso.com", true);
+    MensajesTest mensajesTest_2 = new MensajesTest("Apple ID: Su cuenta necesita una actualización de seguridad urgente. Inicie sesión y actualice sus datos en https://apple-seguridad-falso.com", true);
+    MensajesTest mensajesTest_3 = new MensajesTest("DHL: No pudimos entregar su paquete. Actualice su dirección y pague la tarifa de reenvío aquí: https://dhl-envio-falso.com", true);
+    MensajesTest mensajesTest_4 = new MensajesTest("Amazon: Su pedido #123456 ha sido confirmado y se enviará pronto. Puede seguir el estado de su pedido aquí: https://amazon.com/trackorder", false);
+    MensajesTest mensajesTest_5 = new MensajesTest("Clínica Dental: Recuerde su cita con el Dr. Pérez el 5 de junio a las 10:00 AM. Si necesita reprogramar, llame al 123-456-7890.", false);
+
+    List<MensajesTest> mensajesTests = Arrays.asList(mensajesTest_1, mensajesTest_2, mensajesTest_3, mensajesTest_4, mensajesTest_5);
 
     public SendMessage processMessage(Update update) {
         String messageReceived = update.getMessage().getText();
         String chatId = update.getMessage().getChatId().toString();
-
         if (messageReceived.startsWith("/")) {
             return handleCommand(messageReceived, chatId);
         } else {
-            List<Button> buttons = Arrays.asList(
-                    new Button("Button 1", "callback_1"),
-                    new Button("Button 2", "callback_2"));
-            return sendWithKeyboard(chatId, messageReceived, buttons);
+            return new SendMessage(chatId, messageReceived);
         }
     }
 
     private SendMessage handleCommand(String messageReceived, String chatId) {
-        String responseMessage = switch (messageReceived) {
-            case "/start" -> "¡Bienvenido! ¿En qué puedo ayudarte hoy?";
-            case "/info" -> "Soy VerifyBot, mi función principal es detectar mensajes fraudulentos ;)" +
-                    "\nPuedo responder a comandos como: /start, /info, y más.";
-            case "/help" -> "Lista de comandos:\n/start - Iniciar\n/info - Información\n/help - Ayuda";
-            default -> "Lo siento, no reconozco ese comando. Usa /help para ver la lista de comandos disponibles.";
+        return switch (messageReceived) {
+            case "/start" -> initMenu(chatId);
+            case "/info" ->  new SendMessage(chatId,"Soy VerifyBot, mi función principal es detectar mensajes fraudulentos ;)" +
+                    "\nPuedo responder a comandos como: /start, /info, y más.");
+            case "/help" ->  new SendMessage(chatId,"Lista de comandos:\n/start - Iniciar\n/info - Información\n/help - Ayuda");
+            default ->  new SendMessage(chatId,"Lo siento, no reconozco ese comando. Usa /help para ver la lista de comandos disponibles.");
         };
-        return new SendMessage(chatId, responseMessage);
+    }
+
+    private SendMessage initMenu(String chatId) {
+        String welcomeMessage = "¡Bienvenido! Soy VerifyBot, tu bot de confianza";
+        List<Button> buttons = Arrays.asList(
+                new Button("Realizar Test", "callback_test"),
+                new Button("Verificar Mensaje", "callback_mensaje"));
+        return sendWithKeyboard(chatId, welcomeMessage, buttons);
     }
 
     //private SendMessage generateSendMessage(String chatId, List<String> foundWords) {
@@ -63,9 +74,26 @@ public class MessageProcessor {
     //}
 
     public SendMessage processCallback(CallbackQuery callbackQuery) {
-        String callbackData = callbackQuery.getData();
         String chatId = callbackQuery.getMessage().getChatId().toString();
-        return new SendMessage(chatId, "Callback recibido: " + callbackData);
+        SendMessage message;
+        if(contadorMensajes >= 5) {
+            message = new SendMessage();
+            message.setChatId(chatId);
+            message.setText("Felicidades");
+        } else {
+            List<String> mensajes = mensajesTests.stream()
+                    .map(MensajesTest::getTexto)
+                    .collect(Collectors.toList());
+            message = sendWithKeyboard(chatId, mensajes.get(contadorMensajes), createButtons());
+            contadorMensajes++;
+        }
+        return message;
+    }
+
+    private List<Button> createButtons() {
+        return Arrays.asList(
+                new Button("Verdadero", "cb_verdadero"),
+                new Button("Falso", "cb_falso"));
     }
 
     public SendMessage sendWithKeyboard(String chatId, String text, List<Button> buttons) {

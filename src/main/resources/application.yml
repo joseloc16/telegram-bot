@@ -16,6 +16,8 @@ spring:
     open-in-view: false
     generate-ddl: true
 
+contador-mensajes: 0
+
 verifyBot:
   botName: your_bot_name_from_bot_father
   botToken: your_bot_token_from_bot_father
