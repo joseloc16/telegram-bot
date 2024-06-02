@@ -16,12 +16,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.joseloc.telegrambot.enums.ButtonType.*;
+
 @RequiredArgsConstructor
 @Service
 public class MessageProcessor {
 
-    @Value("${contador-mensajes}")
+    @Value("${contador.mensajes-test}")
     private int contadorMensajes;
+
+    @Value("${contador.aciertos}")
+    private int contadorAciertos;
 
     MensajesTest mensajesTest_1 = new MensajesTest("Banco Nacional: Su cuenta ha sido bloqueada debido a actividad sospechosa. Verifique su información inmediatamente en https://banco-verificacion-falso.com", true);
     MensajesTest mensajesTest_2 = new MensajesTest("Apple ID: Su cuenta necesita una actualización de seguridad urgente. Inicie sesión y actualice sus datos en https://apple-seguridad-falso.com", true);
@@ -54,8 +59,8 @@ public class MessageProcessor {
     private SendMessage initMenu(String chatId) {
         String welcomeMessage = "¡Bienvenido! Soy VerifyBot, tu bot de confianza";
         List<Button> buttons = Arrays.asList(
-                new Button("Realizar Test", "callback_test"),
-                new Button("Verificar Mensaje", "callback_mensaje"));
+                new Button("Realizar Test", INICIO.getDisplayName()),
+                new Button("Verificar Mensaje", INICIO.getDisplayName()));
         return sendWithKeyboard(chatId, welcomeMessage, buttons);
     }
 
@@ -75,25 +80,50 @@ public class MessageProcessor {
 
     public SendMessage processCallback(CallbackQuery callbackQuery) {
         String chatId = callbackQuery.getMessage().getChatId().toString();
+        System.out.println(callbackQuery.getData());
         SendMessage message;
+
+        if(callbackQuery.getData().equals(INICIO.getDisplayName())) {
+            contadorMensajes = 0;
+            contadorAciertos = 0;
+        } else {
+            validarAciertos(callbackQuery);
+            contadorMensajes++;
+        }
+
         if(contadorMensajes >= 5) {
             message = new SendMessage();
             message.setChatId(chatId);
-            message.setText("Felicidades");
+            message.setText("Su porcentaje de aciertos fue: " + calcularPorcentaje() + "%");
         } else {
             List<String> mensajes = mensajesTests.stream()
                     .map(MensajesTest::getTexto)
                     .collect(Collectors.toList());
             message = sendWithKeyboard(chatId, mensajes.get(contadorMensajes), createButtons());
-            contadorMensajes++;
         }
+
+        System.out.println("contador mensajes-test: " + contadorMensajes);
+        System.out.println("contador aciertos: " + contadorAciertos);
         return message;
+    }
+
+    private void validarAciertos(CallbackQuery callbackQuery) {
+        String callbackData = callbackQuery.getData();
+        MensajesTest mensajeActual = mensajesTests.get(contadorMensajes);
+        if (callbackData.equals(VERDADERO.getDisplayName()) && mensajeActual.esEstafa()
+                || callbackData.equals(FALSO.getDisplayName()) && !mensajeActual.esEstafa()) {
+            contadorAciertos++;
+        }
+    }
+
+    private double calcularPorcentaje() {
+        return ((double) contadorAciertos / 5) * 100;
     }
 
     private List<Button> createButtons() {
         return Arrays.asList(
-                new Button("Verdadero", "cb_verdadero"),
-                new Button("Falso", "cb_falso"));
+                new Button("Verdadero", VERDADERO.getDisplayName()),
+                new Button("Falso", FALSO.getDisplayName()));
     }
 
     public SendMessage sendWithKeyboard(String chatId, String text, List<Button> buttons) {
