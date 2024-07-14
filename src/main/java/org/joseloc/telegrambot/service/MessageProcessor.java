@@ -1,16 +1,21 @@
 package org.joseloc.telegrambot.service;
 
-import lombok.RequiredArgsConstructor;
+import org.apache.commons.io.IOUtils;
 import org.joseloc.telegrambot.dto.Button;
 import org.joseloc.telegrambot.dto.MensajesTest;
+import org.joseloc.telegrambot.util.CustomMultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -19,10 +24,23 @@ import java.util.stream.Collectors;
 import static org.joseloc.telegrambot.enums.ButtonType.*;
 
 @Service
-@RequiredArgsConstructor
 public class MessageProcessor {
 
     private final WordFinder wordFinder;
+    private final BotService botService;
+    private final OcrService ocrService;
+
+    private static final String URL_BASE_TELEGRAM_BOT = "https://api.telegram.org/file/bot";
+
+    public MessageProcessor(BotService botService, OcrService ocrService, WordFinder wordFinder) {
+        this.botService = botService;
+        this.ocrService = ocrService;
+        this.wordFinder = wordFinder;
+        this.botService.setMessageProcessor(this);
+    }
+
+    @Value("${verifyBot.botToken}")
+    private String botToken;
 
     @Value("${contador.mensajes-test}")
     private int contadorMensajes;
@@ -48,6 +66,40 @@ public class MessageProcessor {
             List<String> foundWords = wordFinder.findWords(messageReceived);
             return generateSendMessage(chatId, foundWords);
         }
+    }
+
+    public SendMessage processPhoto(Update update) {
+        String chatId = update.getMessage().getChatId().toString();
+        List<PhotoSize> photos = update.getMessage().getPhoto();
+        String fileId = photos.get(photos.size() - 1).getFileId();
+
+        try {
+            MultipartFile multipartFile = downloadAndConvertToMultipartFile(fileId);
+            String textoImagenResp = ocrService.processImage(multipartFile);
+            return new SendMessage(chatId, textoImagenResp);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new SendMessage(chatId, "Error al procesar la imagen.");
+        }
+    }
+
+    private MultipartFile downloadAndConvertToMultipartFile(String fileId) throws Exception {
+        // Obtener la URL del archivo usando el servicio de bot
+        String filePath = botService.getFilePath(fileId);
+
+        String fileUrl = URL_BASE_TELEGRAM_BOT + botService.getBotToken() + "/" + filePath;
+
+        // Descargar el archivo
+        URL url = new URL(fileUrl);
+        InputStream inputStream = url.openStream();
+
+        // Convertir InputStream a MultipartFile
+        byte[] bytes = IOUtils.toByteArray(inputStream);
+        String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
+        MultipartFile multipartFile = new CustomMultipartFile(fileName, fileName, "image/jpeg", bytes);
+
+        inputStream.close();
+        return multipartFile;
     }
 
     private SendMessage handleCommand(String messageReceived, String chatId) {
