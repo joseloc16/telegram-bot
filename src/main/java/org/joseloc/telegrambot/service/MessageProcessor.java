@@ -7,13 +7,17 @@ import org.joseloc.telegrambot.util.CustomMultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
@@ -28,16 +32,9 @@ public class MessageProcessor {
 
     private final WordFinder wordFinder;
     private final BotService botService;
-    private final OcrService ocrService;
+    private final ProcessingService processingService;
 
     private static final String URL_BASE_TELEGRAM_BOT = "https://api.telegram.org/file/bot";
-
-    public MessageProcessor(BotService botService, OcrService ocrService, WordFinder wordFinder) {
-        this.botService = botService;
-        this.ocrService = ocrService;
-        this.wordFinder = wordFinder;
-        this.botService.setMessageProcessor(this);
-    }
 
     @Value("${verifyBot.botToken}")
     private String botToken;
@@ -47,6 +44,13 @@ public class MessageProcessor {
 
     @Value("${contador.aciertos}")
     private int contadorAciertos;
+
+    public MessageProcessor(BotService botService, ProcessingService processingService, WordFinder wordFinder) {
+        this.botService = botService;
+        this.processingService = processingService;
+        this.wordFinder = wordFinder;
+        this.botService.setMessageProcessor(this); //asegura que BotService tenga acceso a los métodos del MessageProcessor
+    }
 
     MensajesTest mensajesTest_1 = new MensajesTest("Banco Nacional: Su cuenta ha sido bloqueada debido a actividad sospechosa. Verifique su información inmediatamente en https://banco-verificacion-falso.com", true);
     MensajesTest mensajesTest_2 = new MensajesTest("Apple ID: Su cuenta necesita una actualización de seguridad urgente. Inicie sesión y actualice sus datos en https://apple-seguridad-falso.com", true);
@@ -68,36 +72,50 @@ public class MessageProcessor {
         }
     }
 
-    public SendMessage processPhoto(Update update) {
-        String chatId = update.getMessage().getChatId().toString();
+    public SendMessage processAudio(Update update) throws TelegramApiException {
+        String fileId = update.getMessage().getAudio().getFileId();
+        return processMediaFile(update, fileId, "audio/mpeg");
+    }
+
+    public SendMessage processVoice(Update update) throws TelegramApiException {
+        String fileId = update.getMessage().getVoice().getFileId();
+        return processMediaFile(update, fileId, "audio/ogg");
+    }
+
+    public SendMessage processPhoto(Update update) throws TelegramApiException {
         List<PhotoSize> photos = update.getMessage().getPhoto();
         String fileId = photos.get(photos.size() - 1).getFileId();
+        return processMediaFile(update, fileId, "image/jpeg");
+    }
+
+    private SendMessage processMediaFile(Update update, String fileId, String contentType) throws TelegramApiException {
+        String chatId = update.getMessage().getChatId().toString();
+        File file = botService.execute(new GetFile(fileId));
+        String fileUrl = URL_BASE_TELEGRAM_BOT + botToken + "/" + file.getFilePath();
+        String transcriptionText  = "";
 
         try {
-            MultipartFile multipartFile = downloadAndConvertToMultipartFile(fileId);
-            String textoImagenResp = ocrService.processImage(multipartFile);
-            return new SendMessage(chatId, textoImagenResp);
+            MultipartFile multipartFile = downloadAndConvertToMultipartFile(fileUrl, contentType);
+
+            if (contentType.equals("image/jpeg")) {
+                transcriptionText  = processingService.processImage(multipartFile);
+                return new SendMessage(chatId, transcriptionText );
+            }
+
+            transcriptionText  = processingService.processAudio(multipartFile);
+            return new SendMessage(chatId, "Texto del audio: " + transcriptionText );
         } catch (Exception e) {
             e.printStackTrace();
-            return new SendMessage(chatId, "Error al procesar la imagen.");
+            return new SendMessage(chatId, "Error al procesar el archivo");
         }
     }
 
-    private MultipartFile downloadAndConvertToMultipartFile(String fileId) throws Exception {
-        // Obtener la URL del archivo usando el servicio de bot
-        String filePath = botService.getFilePath(fileId);
-
-        String fileUrl = URL_BASE_TELEGRAM_BOT + botService.getBotToken() + "/" + filePath;
-
-        // Descargar el archivo
+    private MultipartFile downloadAndConvertToMultipartFile(String fileUrl, String contentType) throws Exception {
         URL url = new URL(fileUrl);
-        InputStream inputStream = url.openStream();
-
-        // Convertir InputStream a MultipartFile
+        InputStream inputStream = new BufferedInputStream(url.openStream());
         byte[] bytes = IOUtils.toByteArray(inputStream);
-        String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
-        MultipartFile multipartFile = new CustomMultipartFile(fileName, fileName, "image/jpeg", bytes);
-
+        String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+        MultipartFile multipartFile = new CustomMultipartFile(fileName, fileName, contentType, bytes);
         inputStream.close();
         return multipartFile;
     }

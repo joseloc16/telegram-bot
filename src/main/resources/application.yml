@@ -24,4 +24,9 @@ verifyBot:
   botName: your_bot_name_from_bot_father
   botToken: your_bot_token_from_bot_father
 
+openai:
+  key: your_openai_key
 
+server-url:
+  image-processing:  http://localhost:5000/process_image
+  audio-transcription: https://api.openai.com/v1/audio/transcriptions

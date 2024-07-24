@@ -1,6 +1,7 @@
 package org.joseloc.telegrambot.service;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -12,6 +13,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 @Service
 public class BotService extends TelegramLongPollingBot {
 
+    @Setter
     private MessageProcessor messageProcessor;
 
     @Value("${verifyBot.botName}")
@@ -34,6 +36,10 @@ public class BotService extends TelegramLongPollingBot {
                 response = messageProcessor.processMessage(update);
             } else if (update.hasMessage() && update.getMessage().hasPhoto()) {
                 response = messageProcessor.processPhoto(update);
+            } else if (update.hasMessage() && update.getMessage().hasAudio()) {
+                response = messageProcessor.processAudio(update);
+            } else if (update.hasMessage() && update.getMessage().hasVoice()) {
+                response = messageProcessor.processVoice(update);
             } else if (update.hasCallbackQuery()) {
                 response = messageProcessor.processCallback(update.getCallbackQuery());
             } else {
@@ -52,7 +58,4 @@ public class BotService extends TelegramLongPollingBot {
         return execute(getFile).getFilePath();
     }
 
-    public void setMessageProcessor(MessageProcessor messageProcessor) {
-        this.messageProcessor = messageProcessor;
-    }
 }
