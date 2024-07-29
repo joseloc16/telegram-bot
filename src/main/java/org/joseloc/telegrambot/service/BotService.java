@@ -2,10 +2,11 @@ package org.joseloc.telegrambot.service;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.SneakyThrows;
+import org.joseloc.telegrambot.enums.MessageType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -28,36 +29,30 @@ public class BotService extends TelegramLongPollingBot {
         return botName;
     }
 
+    @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
+        SendMessage response;
+
+        MessageType messageType = MessageType.fromUpdate(update);
+
         try {
-            SendMessage response;
-            if (update.hasMessage() && update.getMessage().hasText()) {
-                response = messageProcessor.processMessage(update);
-            } else if (update.hasMessage() && update.getMessage().hasPhoto()) {
-                response = messageProcessor.processPhoto(update);
-            } else if (update.hasMessage() && update.getMessage().hasAudio()) {
-                response = messageProcessor.processAudio(update);
-            } else if (update.hasMessage() && update.getMessage().hasVoice()) {
-                response = messageProcessor.processVoice(update);
-            } else if (update.hasMessage() && update.getMessage().hasVideo()) {
-                response = messageProcessor.processVideo(update);
-            } else if (update.hasCallbackQuery()) {
-                response = messageProcessor.processCallback(update.getCallbackQuery());
-            } else {
-                String chatId = update.hasMessage() ? update.getMessage().getChatId().toString() : "unknown";
-                response = new SendMessage(chatId, "Disculpa. No puedo procesar este mensaje.");
-            }
+            response = switch (messageType) {
+                case TEXT -> messageProcessor.processMessage(update);
+                case PHOTO -> messageProcessor.processPhoto(update);
+                case AUDIO -> messageProcessor.processAudio(update);
+                case VOICE -> messageProcessor.processVoice(update);
+                case VIDEO -> messageProcessor.processVideo(update);
+                case CALLBACK -> messageProcessor.processCallback(update.getCallbackQuery());
+                case UNKNOWN -> {
+                    String chatId = update.hasMessage() ? update.getMessage().getChatId().toString() : "unknown";
+                    yield new SendMessage(chatId, "Disculpa. No puedo procesar este mensaje.");
+                }
+            };
             execute(response);
         } catch (TelegramApiException ex) {
             ex.printStackTrace();
         }
-    }
-
-    public String getFilePath(String fileId) throws TelegramApiException {
-        GetFile getFile = new GetFile();
-        getFile.setFileId(fileId);
-        return execute(getFile).getFilePath();
     }
 
 }
