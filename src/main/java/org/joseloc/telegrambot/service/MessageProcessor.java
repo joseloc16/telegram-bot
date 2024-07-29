@@ -82,6 +82,11 @@ public class MessageProcessor {
         return processMediaFile(update, fileId, "audio/ogg");
     }
 
+    public SendMessage processVideo(Update update) throws TelegramApiException {
+        String fileId = update.getMessage().getVideo().getFileId();
+        return processMediaFile(update, fileId, "video/mp4");
+    }
+
     public SendMessage processPhoto(Update update) throws TelegramApiException {
         List<PhotoSize> photos = update.getMessage().getPhoto();
         String fileId = photos.get(photos.size() - 1).getFileId();

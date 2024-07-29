@@ -40,6 +40,8 @@ public class BotService extends TelegramLongPollingBot {
                 response = messageProcessor.processAudio(update);
             } else if (update.hasMessage() && update.getMessage().hasVoice()) {
                 response = messageProcessor.processVoice(update);
+            } else if (update.hasMessage() && update.getMessage().hasVideo()) {
+                response = messageProcessor.processVideo(update);
             } else if (update.hasCallbackQuery()) {
                 response = messageProcessor.processCallback(update.getCallbackQuery());
             } else {
