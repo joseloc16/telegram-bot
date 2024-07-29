@@ -1,6 +1,13 @@
 spring:
   application:
     name: telegram-bot
+    version: 1.0.0
+  banner:
+    location: classpath:banner.txt
+  output:
+    ansi:
+      enabled: always
+
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5431/telegrambot-db
