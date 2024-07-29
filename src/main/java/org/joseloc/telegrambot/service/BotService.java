@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.joseloc.telegrambot.enums.MessageType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -11,8 +13,11 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+
 @Service
 public class BotService extends TelegramLongPollingBot {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(BotService.class);
 
     @Setter
     private MessageProcessor messageProcessor;
@@ -35,6 +40,7 @@ public class BotService extends TelegramLongPollingBot {
         SendMessage response;
 
         MessageType messageType = MessageType.fromUpdate(update);
+        LOGGER.info("Received messageType: {}", messageType);
 
         try {
             response = switch (messageType) {
@@ -49,9 +55,10 @@ public class BotService extends TelegramLongPollingBot {
                     yield new SendMessage(chatId, "Disculpa. No puedo procesar este mensaje.");
                 }
             };
+            LOGGER.info(response.getText());
             execute(response);
         } catch (TelegramApiException ex) {
-            ex.printStackTrace();
+            LOGGER.error(ex.getMessage());
         }
     }
 
