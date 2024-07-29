@@ -7,8 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ButtonType {
     REALIZAR_TEST ("Realizar test"),
-    VERIFICAR_MENSAJE ("Verificar mensaje"),
-    VERDADERO ("Verdaero"),
+    VERIFICAR_NOTICIA ("Verificar noticia"),
+    VERDADERO ("Verdadero"),
     FALSO ("Falso");
 
     private final String displayName;

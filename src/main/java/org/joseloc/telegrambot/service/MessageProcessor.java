@@ -52,11 +52,11 @@ public class MessageProcessor {
         this.botService.setMessageProcessor(this); //asegura que BotService tenga acceso a los métodos del MessageProcessor
     }
 
-    MensajesTest mensajesTest_1 = new MensajesTest("Banco Nacional: Su cuenta ha sido bloqueada debido a actividad sospechosa. Verifique su información inmediatamente en https://banco-verificacion-falso.com", true);
-    MensajesTest mensajesTest_2 = new MensajesTest("Apple ID: Su cuenta necesita una actualización de seguridad urgente. Inicie sesión y actualice sus datos en https://apple-seguridad-falso.com", true);
-    MensajesTest mensajesTest_3 = new MensajesTest("DHL: No pudimos entregar su paquete. Actualice su dirección y pague la tarifa de reenvío aquí: https://dhl-envio-falso.com", true);
-    MensajesTest mensajesTest_4 = new MensajesTest("Amazon: Su pedido #123456 ha sido confirmado y se enviará pronto. Puede seguir el estado de su pedido aquí: https://amazon.com/trackorder", false);
-    MensajesTest mensajesTest_5 = new MensajesTest("Clínica Dental: Recuerde su cita con el Dr. Pérez el 5 de junio a las 10:00 AM. Si necesita reprogramar, llame al 123-456-7890.", false);
+    MensajesTest mensajesTest_1 = new MensajesTest("Noticia 1", true);
+    MensajesTest mensajesTest_2 = new MensajesTest("Noticia 2", true);
+    MensajesTest mensajesTest_3 = new MensajesTest("Noticia 3", true);
+    MensajesTest mensajesTest_4 = new MensajesTest("Noticia 4", false);
+    MensajesTest mensajesTest_5 = new MensajesTest("Noticia 5", false);
 
     List<MensajesTest> mensajesTests = Arrays.asList(mensajesTest_1, mensajesTest_2, mensajesTest_3, mensajesTest_4, mensajesTest_5);
 
@@ -134,7 +134,7 @@ public class MessageProcessor {
         String welcomeMessage = "¡Bienvenido! Soy VerifyBot, tu bot de confianza";
         List<Button> buttons = Arrays.asList(
                 new Button("Realizar Test", REALIZAR_TEST.getDisplayName()),
-                new Button("Verificar Mensaje", VERIFICAR_MENSAJE.getDisplayName()));
+                new Button("Verificar Mensaje", VERIFICAR_NOTICIA.getDisplayName()));
         return sendWithKeyboard(chatId, welcomeMessage, buttons);
     }
 
