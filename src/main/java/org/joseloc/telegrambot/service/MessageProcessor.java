@@ -222,4 +222,87 @@ public class MessageProcessor {
         }
         return stringBuilder;
     }
+
+    public SendMessage processCallback(CallbackQuery callbackQuery) {
+        String method = "processCallback";
+        String chatId = callbackQuery.getMessage().getChatId().toString();
+        String data = callbackQuery.getData();
+        SendMessage message;
+
+        LOGGER.info("{}: {}: Processing callback data: {}", className, method, data);
+
+        if("Realizar Test".equals(data)) {
+            LOGGER.info("{}: {}: Realizar Test command received", className, method);
+
+            if(callbackQuery.getData().equals(REALIZAR_TEST.getDisplayName())) {
+                LOGGER.info("{}: {}: Initializing test counters", className, method);
+                contadorMensajes = 0;
+                contadorAciertos = 0;
+            } else {
+                validarAciertos(callbackQuery);
+                contadorMensajes++;
+            }
+
+            if(contadorMensajes >= 5) {
+                double porcentaje = calcularPorcentaje();
+                LOGGER.info("{}: {}: Test completed with accuracy: {}%", className, method, porcentaje);
+                message = new SendMessage(chatId, "Su porcentaje de aciertos fue: " + porcentaje + "%");
+            } else {
+                List<String> mensajes = mensajesTests.stream()
+                        .map(MensajesTest::getTexto)
+                        .collect(Collectors.toList());
+                message = sendWithKeyboard(chatId, mensajes.get(contadorMensajes), createButtons());
+                LOGGER.info("{}: {}: Sending test message: {}", className, method, mensajes.get(contadorMensajes));
+            }
+
+            LOGGER.debug("contador mensajes-test: {}", contadorMensajes);
+            LOGGER.debug("contador aciertos: {}", contadorAciertos);
+            return message;
+        } else {
+            LOGGER.warn("{}: {}: Unrecognized callback data: {}", className, method, data);
+            return new SendMessage(chatId, "Ingrese mensaje a verificar :D");
+        }
+    }
+
+    private void validarAciertos(CallbackQuery callbackQuery) {
+        String callbackData = callbackQuery.getData();
+        MensajesTest mensajeActual = mensajesTests.get(contadorMensajes);
+        if (callbackData.equals(VERDADERO.getDisplayName()) && mensajeActual.esEstafa()
+                || callbackData.equals(FALSO.getDisplayName()) && !mensajeActual.esEstafa()) {
+            contadorAciertos++;
+        }
+    }
+
+    private double calcularPorcentaje() {
+        return ((double) contadorAciertos / 5) * 100;
+    }
+
+    private List<Button> createButtons() {
+        return Arrays.asList(
+                new Button("Verdadero", VERDADERO.getDisplayName()),
+                new Button("Falso", FALSO.getDisplayName()));
+    }
+
+    public SendMessage sendWithKeyboard(String chatId, String text, List<Button> buttons) {
+        SendMessage send = new SendMessage();
+        send.setChatId(chatId);
+        send.setText(text);
+        send.setReplyMarkup(inlineKeyboard(buttons));
+        return send;
+    }
+
+    public InlineKeyboardMarkup inlineKeyboard(List<Button> buttons) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> totalList = new ArrayList<>();
+        for (Button button : buttons) {
+            List<InlineKeyboardButton> keyboardButtonRow = new ArrayList<>();
+
+            InlineKeyboardButton inlineButton = new InlineKeyboardButton(button.getLabel());
+            inlineButton.setCallbackData(button.getCallback());
+            keyboardButtonRow.add(inlineButton);
+            totalList.add(keyboardButtonRow);
+        }
+        inlineKeyboardMarkup.setKeyboard(totalList);
+        return inlineKeyboardMarkup;
+    }
 }
