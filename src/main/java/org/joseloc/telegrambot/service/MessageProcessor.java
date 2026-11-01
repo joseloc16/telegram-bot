@@ -82,6 +82,91 @@ public class MessageProcessor {
             return generateSendMessage(chatId, foundWords);
         }
     }
+
+    public SendMessage processAudio(Update update) throws TelegramApiException {
+        method = "processAudio";
+        LOGGER.info("Processing Audio...");
+        LOGGER.info("{}: {}: {}", className, method, "fileId: " + update.getMessage().getAudio().getFileId());
+
+        String fileId = update.getMessage().getAudio().getFileId();
+        return processMediaFile(update, fileId, "audio/mpeg");
+    }
+
+    public SendMessage processVoice(Update update) throws TelegramApiException {
+        method = "processVoice";
+        LOGGER.info("Processing Voice...");
+        LOGGER.info("{}: {}: {}", className, method, "fileId: " + update.getMessage().getVoice().getFileId());
+
+        String fileId = update.getMessage().getVoice().getFileId();
+        return processMediaFile(update, fileId, "audio/ogg");
+    }
+
+    public SendMessage processVideo(Update update) throws TelegramApiException {
+        method = "processVideo";
+        LOGGER.info("Processing Video...");
+        LOGGER.info("{}: {}: {}", className, method, "fileId: " + update.getMessage().getVideo().getFileId());
+
+        String fileId = update.getMessage().getVideo().getFileId();
+        return processMediaFile(update, fileId, "video/mp4");
+    }
+
+    public SendMessage processPhoto(Update update) throws TelegramApiException {
+        method = "processPhoto";
+        LOGGER.info("Processing Photo...");
+        LOGGER.info("{}: {}: {}", className, method, "fileId: " + update.getMessage().getPhoto());
+
+        List<PhotoSize> photos = update.getMessage().getPhoto();
+        String fileId = photos.get(photos.size() - 1).getFileId();
+        return processMediaFile(update, fileId, "image/jpeg");
+    }
+
+    private SendMessage processMediaFile(Update update, String fileId, String contentType) throws TelegramApiException {
+        String chatId = update.getMessage().getChatId().toString();
+        String method = "processMediaFile";
+        LOGGER.info("{}: {}: Start processing media file", className, method);
+        LOGGER.info("{}: {}: File ID: {}, Content Type: {}", className, method, fileId, contentType);
+
+        try {
+            File file = botService.execute(new GetFile(fileId));
+            String fileUrl = URL_BASE_TELEGRAM_BOT + botToken + "/" + file.getFilePath();
+            LOGGER.info("{}: {}: File URL: {}", className, method, fileUrl);
+
+            MultipartFile multipartFile = downloadAndConvertToMultipartFile(fileUrl, contentType);
+            String transcriptionText  = "";
+
+            if (contentType.equals("image/jpeg")) {
+                transcriptionText  = processingService.processImage(multipartFile);
+                LOGGER.info("{}: {}: Image processed successfully", className, method);
+                return new SendMessage(chatId, transcriptionText );
+            }
+
+            transcriptionText  = processingService.processAudio(multipartFile);
+            LOGGER.info("{}: {}: {}: {}", contentType, "processed successfully", className, method);
+            return new SendMessage(chatId, "Texto del audio: " + transcriptionText );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new SendMessage(chatId, "Error al procesar el archivo");
+        }
+    }
+
+    private MultipartFile downloadAndConvertToMultipartFile(String fileUrl, String contentType) throws Exception {
+        String method = "downloadAndConvertToMultipartFile";
+        LOGGER.info("{}: {}: Start downloading and converting file", className, method);
+
+        try (InputStream inputStream = new BufferedInputStream(new URL(fileUrl).openStream())) {
+            byte[] bytes = IOUtils.toByteArray(inputStream);
+            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+            LOGGER.info("{}: {}: File downloaded successfully. File name: {}", className, method, fileName);
+
+            MultipartFile multipartFile = new CustomMultipartFile(fileName, fileName, contentType, bytes);
+            LOGGER.info("{}: {}: File converted to MultipartFile", className, method);
+            return multipartFile;
+        } catch (Exception e) {
+            LOGGER.error("{}: {}: Error downloading or converting file", className, method, e);
+            throw e;
+        }
+    }
+
     private SendMessage handleCommand(String messageReceived, String chatId) {
         String method = "handleCommand";
         LOGGER.info("{}: {}: Received command: {}", className, method, messageReceived);
